@@ -2,7 +2,7 @@
 //  AppDelegate.swift
 //  GeoFenceDemo
 //
-//  Created by GCSMAC10 on 2016/08/19.
+//  Created by Satoshi Hattori on 2016/08/19.
 //  Copyright © 2016年 Satoshi Hattori. All rights reserved.
 //
 
