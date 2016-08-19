@@ -17,7 +17,6 @@ class MapViewController: UIViewController, MKMapViewDelegate, CLLocationManagerD
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.mapView.mapType = MKMapType.HybridFlyover
     }
 
     override func viewWillAppear(animated: Bool) {
@@ -68,7 +67,7 @@ class MapViewController: UIViewController, MKMapViewDelegate, CLLocationManagerD
         let clampedRadius = GeoFenceManager.sharedInstance.getRadius(radius)
         let geoFenceItem = GeoFenceItem(coordinate: coordinate, radius: clampedRadius, identifier: identifier, note: note, eventType: eventType)
         
-        GeoFenceManager.sharedInstance.startMonitoringGeoFenceItem(self, geoFenceItem: geoFenceItem)
+        GeoFenceManager.sharedInstance.startMonitoringGeoFenceItem(geoFenceItem)
         
         self.mapView.addAnnotation(geoFenceItem)
         self.addRadiusOverlayForGeoFenceItem(geoFenceItem)

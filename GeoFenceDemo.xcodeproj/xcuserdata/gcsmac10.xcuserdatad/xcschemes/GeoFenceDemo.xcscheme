@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "749F71091D57E27B00617072"
+               BlueprintIdentifier = "1A63329D1D66F454007389FC"
                BuildableName = "GeoFenceDemo.app"
                BlueprintName = "GeoFenceDemo"
                ReferencedContainer = "container:GeoFenceDemo.xcodeproj">
@@ -32,7 +32,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "749F71091D57E27B00617072"
+            BlueprintIdentifier = "1A63329D1D66F454007389FC"
             BuildableName = "GeoFenceDemo.app"
             BlueprintName = "GeoFenceDemo"
             ReferencedContainer = "container:GeoFenceDemo.xcodeproj">
@@ -55,7 +55,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "749F71091D57E27B00617072"
+            BlueprintIdentifier = "1A63329D1D66F454007389FC"
             BuildableName = "GeoFenceDemo.app"
             BlueprintName = "GeoFenceDemo"
             ReferencedContainer = "container:GeoFenceDemo.xcodeproj">
@@ -74,7 +74,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "749F71091D57E27B00617072"
+            BlueprintIdentifier = "1A63329D1D66F454007389FC"
             BuildableName = "GeoFenceDemo.app"
             BlueprintName = "GeoFenceDemo"
             ReferencedContainer = "container:GeoFenceDemo.xcodeproj">

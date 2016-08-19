@@ -8,15 +8,19 @@
 
 import UIKit
 import CoreLocation
-//import SVProgressHUD
 
 let GEO_FENCE_ITEMS_KEY = "geoFenceItems"
+let GEO_FENCE_IN_CHECK_REPEAR_COUNT = 10
 
 class GeoFenceManager: NSObject, CLLocationManagerDelegate {
 
     var geoFenceItems = [GeoFenceItem]()
+    
     private var locationManager: CLLocationManager
     private var stateCheckRepeatCount = 0
+    private var stateCheckTargetGeoFenceItem: GeoFenceItem!
+    
+    // MARK: - Instance
     
     class var sharedInstance : GeoFenceManager {
         struct Static {
@@ -42,15 +46,21 @@ class GeoFenceManager: NSObject, CLLocationManagerDelegate {
 
     // MARK: - Methods
     
-    func startMonitoringGeoFenceItem(vc: UIViewController, geoFenceItem: GeoFenceItem) {
+    func startMonitoringGeoFenceItem(geoFenceItem: GeoFenceItem) {
         
         if !CLLocationManager.isMonitoringAvailableForClass(CLCircularRegion) {
-            Utilities.showSimpleAlertWithTitle("Error", message: "GeoFencing is not supported on this device", viewController: vc)
+            let appDelegate = UIApplication.sharedApplication().delegate as! AppDelegate
+            if let viewController = appDelegate.window?.rootViewController {
+                Utilities.showSimpleAlertWithTitle("Error", message: "GeoFencing機能はこのデバイスでは使用できません", viewController: viewController)
+            }
             return
         }
         
         if CLLocationManager.authorizationStatus() != .AuthorizedAlways {
-            Utilities.showSimpleAlertWithTitle("Error", message: "You need to grant access the device location.", viewController: vc)
+            let appDelegate = UIApplication.sharedApplication().delegate as! AppDelegate
+            if let viewController = appDelegate.window?.rootViewController {
+                Utilities.showSimpleAlertWithTitle("Error", message: "設定画面から位置情報を有効にしてください", viewController: viewController)
+            }
             return
         }
         
@@ -66,11 +76,14 @@ class GeoFenceManager: NSObject, CLLocationManagerDelegate {
         }
 
         self.locationManager.startMonitoringForRegion(region)
-        self.addGeoFenceItem(geoFenceItem)
+        
+        self.geoFenceItems.append(geoFenceItem)
+        
         self.saveAllGeoFenceItems()
     }
     
     func stopMonitoringGeoFenceItem(geoFenceItem: GeoFenceItem) {
+        
         for region in self.locationManager.monitoredRegions {
             if let circularRegion = region as? CLCircularRegion {
                 if circularRegion.identifier == geoFenceItem.identifier {
@@ -79,42 +92,11 @@ class GeoFenceManager: NSObject, CLLocationManagerDelegate {
             }
         }
         
-        self.removeGeoFenceItem(geoFenceItem)
-        self.saveAllGeoFenceItems()
-    }
-
-    func stopMonitoringGeoFenceItemAll() {
-        for region in self.locationManager.monitoredRegions {
-            if let circularRegion = region as? CLCircularRegion {
-                self.locationManager.stopMonitoringForRegion(circularRegion)
-            }
-        }
-        
-        self.clearAllGeoFenceItems()
-    }
-
-    func addGeoFenceItem(geoFenceItem: GeoFenceItem) {
-        self.geoFenceItems.append(geoFenceItem)
-    }
-    
-    func removeGeoFenceItem(geoFenceItem: GeoFenceItem) {
-        if let indexInArray = geoFenceItems.indexOf(geoFenceItem) {
+        if let indexInArray = self.geoFenceItems.indexOf(geoFenceItem) {
             self.geoFenceItems.removeAtIndex(indexInArray)
         }
-    }
-
-    func locationManager(manager: CLLocationManager, monitoringDidFailForRegion region: CLRegion?, withError error: NSError) {
-        print("Monitoring failed for region with identifier: \(region!.identifier)")
         
-        let notification = UILocalNotification()
-        notification.alertBody = "登録失敗: 再登録してください"
-        notification.soundName = "Default";
-        UIApplication.sharedApplication().presentLocalNotificationNow(notification)
-    }
-    
-    func locationManager(manager: CLLocationManager, didFailWithError error: NSError) {
-        print("Location Manager failed with the following error: \(error)")
-        
+        self.saveAllGeoFenceItems()
     }
 
     func getGeoFenceItem(identifier: String) -> GeoFenceItem! {
@@ -126,36 +108,72 @@ class GeoFenceManager: NSObject, CLLocationManagerDelegate {
         return nil
     }
 
-    // MARK: - Loading and saving functions
+    func handleRegionEvent(manager: CLLocationManager, region: CLRegion!, isIn: Bool) {
+        
+        if manager.location == nil {
+            return
+        }
+        
+        self.stateCheckRepeatCount = 0;
+        self.stateCheckTargetGeoFenceItem = nil
+        
+        let geoFenceItem = self.getGeoFenceItem(region.identifier)
+        let isInStr = isIn ? "IN" : "OUT"
+        let message = "\(geoFenceItem.note) : \(isInStr)"
+        
+        if UIApplication.sharedApplication().applicationState == .Active {
+            
+            let appDelegate = UIApplication.sharedApplication().delegate as! AppDelegate
+            if let viewController = appDelegate.window?.rootViewController {
+                Utilities.showSimpleAlertWithTitle(nil, message: message, viewController: viewController)
+            }
+            
+        } else {
+            
+            let notification = UILocalNotification()
+            notification.alertBody = message
+            notification.soundName = "Default";
+            UIApplication.sharedApplication().presentLocalNotificationNow(notification)
+        }
+    }
+
+    // MARK: - Loading and saving
+    
+    func clearAll() {
+        
+        for region in self.locationManager.monitoredRegions {
+            if let circularRegion = region as? CLCircularRegion {
+                self.locationManager.stopMonitoringForRegion(circularRegion)
+            }
+        }
+        
+        self.geoFenceItems = []
+        
+        NSUserDefaults.standardUserDefaults().setObject([], forKey: GEO_FENCE_ITEMS_KEY)
+        NSUserDefaults.standardUserDefaults().synchronize()
+    }
     
     func loadAllGeoFenceItems() {
+        
         self.geoFenceItems = []
         
         if let savedItems = NSUserDefaults.standardUserDefaults().arrayForKey(GEO_FENCE_ITEMS_KEY) {
             for savedItem in savedItems {
                 if let geoFenceItem = NSKeyedUnarchiver.unarchiveObjectWithData(savedItem as! NSData) as? GeoFenceItem {
-                    self.addGeoFenceItem(geoFenceItem)
+                    self.geoFenceItems.append(geoFenceItem)
                 }
             }
         }
     }
     
     func saveAllGeoFenceItems() {
-        let items = NSMutableArray()
+        
+        var items = [NSData]()
         for geoFenceItem in self.geoFenceItems {
-            let item = NSKeyedArchiver.archivedDataWithRootObject(geoFenceItem)
-            items.addObject(item)
+            items.append(NSKeyedArchiver.archivedDataWithRootObject(geoFenceItem))
         }
         
         NSUserDefaults.standardUserDefaults().setObject(items, forKey: GEO_FENCE_ITEMS_KEY)
-        NSUserDefaults.standardUserDefaults().synchronize()
-    }
-
-    func clearAllGeoFenceItems() {
-        
-        self.geoFenceItems = []
-        
-        NSUserDefaults.standardUserDefaults().setObject([], forKey: GEO_FENCE_ITEMS_KEY)
         NSUserDefaults.standardUserDefaults().synchronize()
     }
 
@@ -167,83 +185,98 @@ class GeoFenceManager: NSObject, CLLocationManagerDelegate {
 
     func locationManager(manager: CLLocationManager, didStartMonitoringForRegion region: CLRegion) {
 
-        // 既に領域内にいる場合、即時に検知されない場合があるため一定間隔で状態確認
-        self.stateCheckRepeatCount = 10
-
-//        //SVProgressHUD.showWithMaskType(SVProgressHUDMaskType.Black)
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(1.0 * Double(NSEC_PER_SEC))), dispatch_get_main_queue(), {
+        NSLog("%@, %d: %@", #function, #line, region.identifier)
+        
+        if region.notifyOnEntry == false {
+            return
+        }
+        
+        // 既に領域内にいる場合、即時に検知されない場合があるため一定間隔で状態確認: リピート回数指定
+        self.stateCheckRepeatCount = GEO_FENCE_IN_CHECK_REPEAR_COUNT
+        
+        if let geoFenceItem = self.getGeoFenceItem(region.identifier) {
+            self.stateCheckTargetGeoFenceItem = geoFenceItem
             self.locationManager.requestStateForRegion(region)
-//            //SVProgressHUD.dismiss()
-        })
+        }
     }
-    
-    func locationManager(manager: CLLocationManager, didExitRegion region: CLRegion) {
+
+    func locationManager(manager: CLLocationManager, didEnterRegion region: CLRegion) {
+        
+        NSLog("%@, %d: %@", #function, #line, region.identifier)
+        
         if region is CLCircularRegion {
-            handleRegionEvent(manager, region: region, isIn: false)
+            self.handleRegionEvent(manager, region: region, isIn: true)
+        }
+    }
+
+    func locationManager(manager: CLLocationManager, didExitRegion region: CLRegion) {
+
+        NSLog("%@, %d: %@", #function, #line, region.identifier)
+        
+        if region is CLCircularRegion {
+            self.handleRegionEvent(manager, region: region, isIn: false)
         }
     }
 
     func locationManager(manager: CLLocationManager, didDetermineState state: CLRegionState, forRegion region: CLRegion) {
         
-        print("state:", state.rawValue)
+        NSLog("%@, %d: %@ / state:%d", #function, #line, region.identifier, state.rawValue)
         
         switch state {
         case .Inside:
+            
             if region is CLCircularRegion {
-                self.handleRegionEvent(manager, region: region, isIn: true)
+                if let stateCheckGeoFenceItem = self.stateCheckTargetGeoFenceItem {
+                    if stateCheckGeoFenceItem.identifier == region.identifier {
+                        self.handleRegionEvent(manager, region: region, isIn: true)
+                    }
+                }
             }
+            
             break
 
         case .Outside:
-            self.stateCheckRepeatCount = 0
+            
+            if self.stateCheckTargetGeoFenceItem == nil {
+                self.stateCheckRepeatCount = 0
+            }
+            
             break
 
         default:
+            
+            print("count:\(self.stateCheckRepeatCount)")
+            
             if self.stateCheckRepeatCount > 0 {
-                print("count:\(self.stateCheckRepeatCount)")
                 self.stateCheckRepeatCount -= 1
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(2.0 * Double(NSEC_PER_SEC))), dispatch_get_main_queue(), {
                     self.locationManager.requestStateForRegion(region)
                 })
+            } else {
+                if let stateCheckTargetGeoFenceItem = self.stateCheckTargetGeoFenceItem {
+                    self.stopMonitoringGeoFenceItem(stateCheckTargetGeoFenceItem)
+                    self.stateCheckTargetGeoFenceItem = nil
+                }
             }
+            
             break
         }
     }
 
-    func handleRegionEvent(manager: CLLocationManager, region: CLRegion!, isIn: Bool) {
- 
-        if manager.location == nil {
-            return
-        }
+    func locationManager(manager: CLLocationManager, monitoringDidFailForRegion region: CLRegion?, withError error: NSError) {
         
-        self.stateCheckRepeatCount = 0;
+        NSLog("%@, %d: %@", #function, #line, region != nil ? region!.identifier : "region is nil")
 
-        let geoFenceItem = self.getGeoFenceItem(region.identifier)
-        
-        let isInStr = isIn ? "IN" : "OUT"
-        let note = geoFenceItem.note
-        
-        let message = "\(note) : \(isInStr)"
-        
-        if UIApplication.sharedApplication().applicationState == .Active {
-            
-            let appDelegate = UIApplication.sharedApplication().delegate as! AppDelegate
-            
-            if let viewController = appDelegate.window?.rootViewController {
-                NSLog("■ showSimpleAlertWithTitle(nil, message: str, viewController: viewController)")
-                Utilities.showSimpleAlertWithTitle(nil, message: message, viewController: viewController)
-            }
-        } else {
-            
-            NSLog("■ UIApplication.sharedApplication().presentLocalNotificationNow(notification)")
-            
-            let notification = UILocalNotification()
-            notification.alertBody = message
-            notification.soundName = "Default";
-            UIApplication.sharedApplication().presentLocalNotificationNow(notification)
-        }
+        let notification = UILocalNotification()
+        notification.alertBody = "登録失敗: 再登録してください"
+        notification.soundName = "Default";
+        UIApplication.sharedApplication().presentLocalNotificationNow(notification)
     }
-
+    
+    func locationManager(manager: CLLocationManager, didFailWithError error: NSError) {
+        NSLog("%@, %d: %@", #function, #line, error)
+    }
+    
     // MARK: - Utility
 
     func getRadius(radius: Double) -> CLLocationDistance {
