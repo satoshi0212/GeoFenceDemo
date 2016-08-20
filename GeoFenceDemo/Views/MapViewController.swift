@@ -38,6 +38,14 @@ class MapViewController: UIViewController, MKMapViewDelegate, CLLocationManagerD
         Utilities.zoomToUserLocationInMapView(mapView, distance: 2000)
     }
     
+    @IBAction func refreshBtn_action(sender: AnyObject) {
+        if self.mapView.mapType == MKMapType.HybridFlyover {
+            self.mapView.mapType = MKMapType.Standard
+        } else if self.mapView.mapType == MKMapType.Standard {
+            self.mapView.mapType = MKMapType.HybridFlyover
+        }
+    }
+    
     // MARK: - Refresh
 
     func refresh() {

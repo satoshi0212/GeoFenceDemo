@@ -34,7 +34,7 @@
                         <rect key="frame" x="0.0" y="0.0" width="320" height="568"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <mapView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" mapType="standard" rotateEnabled="NO" showsUserLocation="YES" translatesAutoresizingMaskIntoConstraints="NO" id="yam-cT-8xe">
+                            <mapView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" mapType="standard" showsUserLocation="YES" translatesAutoresizingMaskIntoConstraints="NO" id="yam-cT-8xe">
                                 <rect key="frame" x="0.0" y="64" width="320" height="504"/>
                                 <connections>
                                     <outlet property="delegate" destination="6nv-Ci-tVu" id="aNV-4N-sCS"/>
@@ -50,6 +50,11 @@
                         </constraints>
                     </view>
                     <navigationItem key="navigationItem" title="GeoFenceDemo (0)" id="6cA-4n-m4y">
+                        <barButtonItem key="leftBarButtonItem" systemItem="refresh" id="8hM-jH-5Vb">
+                            <connections>
+                                <action selector="refreshBtn_action:" destination="6nv-Ci-tVu" id="8Wu-xY-jR7"/>
+                            </connections>
+                        </barButtonItem>
                         <rightBarButtonItems>
                             <barButtonItem systemItem="add" id="7rG-Kw-bgz">
                                 <connections>

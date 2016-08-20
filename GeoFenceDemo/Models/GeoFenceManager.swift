@@ -16,10 +16,10 @@ class GeoFenceManager: NSObject, CLLocationManagerDelegate {
 
     var geoFenceItems = [GeoFenceItem]()
     
-    private var locationManager: CLLocationManager
+    private let locationManager = CLLocationManager()
     private var stateCheckRepeatCount = 0
     private var stateCheckTargetGeoFenceItem: GeoFenceItem!
-    
+
     // MARK: - Instance
     
     class var sharedInstance : GeoFenceManager {
@@ -31,12 +31,14 @@ class GeoFenceManager: NSObject, CLLocationManagerDelegate {
     
     override init() {
         
-        self.locationManager = CLLocationManager()
-        
         super.init()
         
         self.locationManager.delegate = self
-        self.locationManager.requestAlwaysAuthorization()
+        
+        if CLLocationManager.authorizationStatus() == .NotDetermined {
+            self.locationManager.requestAlwaysAuthorization()
+        }
+
         self.loadAllGeoFenceItems()
     }
     
@@ -85,10 +87,8 @@ class GeoFenceManager: NSObject, CLLocationManagerDelegate {
     func stopMonitoringGeoFenceItem(geoFenceItem: GeoFenceItem) {
         
         for region in self.locationManager.monitoredRegions {
-            if let circularRegion = region as? CLCircularRegion {
-                if circularRegion.identifier == geoFenceItem.identifier {
-                    self.locationManager.stopMonitoringForRegion(circularRegion)
-                }
+            if region.identifier == geoFenceItem.identifier {
+                self.locationManager.stopMonitoringForRegion(region)
             }
         }
         
